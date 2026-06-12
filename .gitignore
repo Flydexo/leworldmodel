@@ -1,2 +1,4 @@
 .ipynb_checkpoints
 .venv
+.pyhon-version
+__pycache__
