@@ -7,6 +7,8 @@ import gym_pusht
 import stable_worldmodel as swm
 from torch.utils.data import DataLoader
 import cv2
+import torch.nn.functional as F
+import numpy as np
 device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
 model = WorldModel(
     hidden_dim=192, 
@@ -33,8 +35,12 @@ transform = T.Compose([
 ])
 
 def process_image(img_array):
-    tensor = transform(img_array).to(device, dtype=torch.float32)
-    return tensor.unsqueeze(0).unsqueeze(0)
+    # img_array: HxWxC uint8 from env.render(), values 0-255
+    t = torch.from_numpy(np.ascontiguousarray(img_array)).to(device, dtype=torch.float32)
+    t = t.permute(2, 0, 1)                      # C,H,W  (NO /255 — matches training)
+    t = F.interpolate(t.unsqueeze(0), size=(96, 96),
+                      mode="bilinear", antialias=True, align_corners=False)
+    return t.unsqueeze(0)       
 
 # ==========================================
 # 2. Acquire the Goal State
@@ -44,7 +50,7 @@ dataset = swm.data.load_dataset(
     'tutorial_pusht.lance',
     num_steps=6,
     frameskip=5,
-    keys_to_load=['pixels']
+    keys_to_load=['pixels', 'action']
 )
 # Grab one trajectory and extract the final expert frame
 sample_batch = next(iter(DataLoader(dataset, batch_size=1, shuffle=True)))
@@ -90,22 +96,33 @@ while not done:
     
     with torch.no_grad():
         start_latent = model.encode_frames(start_tensor)
+
+    b = next(iter(DataLoader(dataset, batch_size=1)))
+    print("train pixel range:", b['pixels'].min().item(), b['pixels'].max().item())
+
+    with torch.no_grad():
+        cand = torch.empty(300, 5, 10, device=device).uniform_(0, 512)
+        dest = model.rollout(start_latent.view(1,1,-1), cand, 5)   # (300, D)
+        goalf = goal_latent.view(1, -1)
+        costs = torch.linalg.vector_norm(goalf - dest, dim=1)
+        print("cost min/mean/max/std:", costs.min().item(), costs.mean().item(),
+              costs.max().item(), costs.std().item())
+        # also: how much does the LATENT move as a function of action?
+        print("dest spread across candidates:", dest.std(0).mean().item())
+        print("action range in data:", b['action'].min().item(), b['action'].max().item())
+        print("adaLN cond weight magnitude:", model.predictor.condition.weight.abs().mean().item())
     
     # B. Plan the Future using CEM
     best_macro_sequence = CEM(
-        model=model, 
-        H=5, 
-        N=300, 
-        K=30, 
-        T=30, 
-        action_dim=10, 
-        start=start_latent.view(1, 1, -1), 
-        goal=goal_latent.view(1, 1, -1),
-        device=device
+        model=model, H=10, N=300, K=30, T=30, action_dim=10,
+        start=start_latent.view(1,1,-1), goal=goal_latent.view(1,1,-1),
+        device=device,
+        a_low=-1.0, a_high=1.0,
     )
     
     # C. Execute the chunk of actions
-    action_chunk = best_macro_sequence[0].view(5, 2).cpu().numpy()
+    action_chunk_norm = best_macro_sequence[0].view(5, 2).cpu().numpy()   # in [-1,1]
+    action_chunk = (action_chunk_norm + 1) / 2 * 512   
     
     for action in action_chunk:
         obs, reward, terminated, truncated, info = env.step(action)
