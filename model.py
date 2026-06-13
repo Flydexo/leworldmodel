@@ -68,6 +68,7 @@ class Predictor(nn.Module):
         # action.shape = B * T * D
         alpha1,beta1,gamma1,alpha2,beta2,gamma2 = self.condition(action).chunk(6,-1)
         for layer in self.layers:
+            print(x.shape, self.condition(action).shape)
             x = self.dropout(layer['att'](layer['norm1'](x)*(1.0+gamma1)+beta1))*alpha1+x
             x = self.dropout(layer['ffn'](layer['norm2'](x)*(1.0+gamma2)+beta2))*alpha2+x
         return self.layer_norm(x)
@@ -121,9 +122,11 @@ class WorldModel(nn.Module):
     def forward(self, frames, actions):
         # frames.shape = B * T * C * H * W
         # actions.shape = B * T * action_dim
+        B,T,C,H,W = frames.shape
         actions = self.action_embedder(actions) # B * T * D
-        frames = frames.reshape(-1, frames.shape[-3], frames.shape[-2], frames.shape[-1])
+        frames = frames.reshape(-1, C, H, W) # (B*T)*C*H*W
         frames = self.encoder(frames)
+        frames = frames.reshape(B,T,frames.shape[-1])
         predicted = self.predictor(frames, actions)
         return predicted
         
