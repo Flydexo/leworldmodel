@@ -2,3 +2,7 @@
 .venv
 .pyhon-version
 __pycache__
+le-wm
+stable-worldmodel
+.DS_Store
+videos

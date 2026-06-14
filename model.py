@@ -2,6 +2,7 @@ import torch, torch.nn as nn, torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from collections import OrderedDict
+from torch.linalg import vector_norm
 
 class ActionEmbedder(nn.Module):
     def __init__(self, action_size, hidden_dim):
@@ -145,4 +146,11 @@ class WorldModel(nn.Module):
             pred = self.predictor(t_frames, actions[:,0:i+1,:])
             frames.append(pred[:,-1:,:])
         return pred[:,-1,:]
-        
+
+    def get_cost(self, info_dict: dict, action_candidates: torch.Tensor) -> torch.Tensor:
+        print(info_dict, action_candidates.shape)
+        start = model.encode_frames(frames[0][0].expand(1, 1, -1, -1, -1))
+        goal = model.encode_frames(frames[0][-1].expand(1, 1, -1, -1, -1))
+        destinations = model.rollout(info_dict, candidates, H)  # (N, D)
+        costs = vector_norm(goal_features.expand(N, -1) - action_candidates[:,:,-1,:], dim=-1)
+        return costs

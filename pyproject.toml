@@ -9,7 +9,7 @@ dependencies = [
     "jupyterlab>=4.5.8",
     "opencv-python-headless>=4.13.0.92",
     "pygame>=2.6.1",
-    "pymunk>=6.6.0,<7.0.0",
+    "pymunk>=7.0.0",
     "shapely>=2.1.2",
     "stable-worldmodel[env,train]>=0.1.1",
 ]
