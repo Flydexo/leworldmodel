@@ -2,6 +2,7 @@ import torch, torch.nn as nn, torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from collections import OrderedDict
+from torch.linalg import vector_norm
 
 class ActionEmbedder(nn.Module):
     def __init__(self, action_size, hidden_dim):
@@ -145,4 +146,37 @@ class WorldModel(nn.Module):
             pred = self.predictor(t_frames, actions[:,0:i+1,:])
             frames.append(pred[:,-1:,:])
         return pred[:,-1,:]
+
+    def criterion(self, info_dict: dict):
+        """Compute the cost between predicted embeddings and goal embeddings."""
+        pred_emb = info_dict["predicted_emb"]  # (B,S, T-1, dim)
+        goal_emb = info_dict["goal_emb"]  # (B, S, T, dim)
+
+        goal_emb = goal_emb[..., -1:, :].expand_as(pred_emb)
+
+        # return last-step cost per action candidate
+        cost = F.mse_loss(
+            pred_emb[..., -1:, :],
+            goal_emb[..., -1:, :].detach(),
+            reduction="none",
+        ).sum(dim=tuple(range(2, pred_emb.ndim)))  # (B, S)
+
+        return cost
+
+    def get_cost(
+        self,
+        info_dict: dict,
+        action_candidates: torch.Tensor,
+    ) -> torch.Tensor:
+        _,_,_,H,W,C = info_dict['pixels'].shape
+        device = next(self.parameters()).device
+        info_dict['pixels'] = torch.nan_to_num(info_dict['pixels'], 0.0).to(device).type(torch.float32)
+        info_dict['goal'] = torch.nan_to_num(info_dict['goal'] , 0.0).to(device).type(torch.float32)
+        start = self.encode_frames(info_dict['pixels'].reshape(-1, H, W, C).transpose(1,-1).transpose(-1, -2).unsqueeze(1))
+        E,N,T,AD = action_candidates.shape
+        actions = action_candidates.reshape(-1,T,AD)
+        destinations = self.rollout(start, actions, 3)  # (N, D)
+        goal = self.encode_frames(info_dict['goal'].view(-1, H, W, C).transpose(1,-1).transpose(-1, -2).unsqueeze(0))
+        cost = vector_norm(goal - destinations.view(E, N, -1), dim=-1)
         
+        return cost
