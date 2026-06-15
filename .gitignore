@@ -2,3 +2,5 @@
 .venv
 .pyhon-version
 __pycache__
+videos
+*.pt

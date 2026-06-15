@@ -175,7 +175,7 @@ class WorldModel(nn.Module):
         start = self.encode_frames(info_dict['pixels'].reshape(-1, H, W, C).transpose(1,-1).transpose(-1, -2).unsqueeze(1))
         E,N,T,AD = action_candidates.shape
         actions = action_candidates.reshape(-1,T,AD)
-        destinations = self.rollout(start, actions, 3)  # (N, D)
+        destinations = self.rollout(start, actions, T)  # (N, D)
         goal = self.encode_frames(info_dict['goal'].view(-1, H, W, C).transpose(1,-1).transpose(-1, -2).unsqueeze(0))
         cost = vector_norm(goal - destinations.view(E, N, -1), dim=-1)
         
