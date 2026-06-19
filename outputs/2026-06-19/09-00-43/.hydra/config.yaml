@@ -1,0 +1,24 @@
+device: cuda
+epochs: 1
+batch_size: 54
+learning_rate: 0.0001
+lambda: 0.1
+train_dataset: small-tworooms.lance
+test_dataset: small-tworooms-test.lance
+num_steps: 1
+model:
+  action_dim: 2
+  hidden_dim: 192
+  patch_size: 14
+  channels: 3
+  enc_nb_heads: 3
+  enc_nb_layers: 12
+  height: 224
+  width: 224
+  pred_nb_layers: 6
+  pred_p_dropout: 0.1
+  pred_nb_heads: 16
+trackio:
+  project: tworoom
+  name: test-training
+  server_url: http://127.0.0.1:7862?write_token=3qxFCeHCqCKLF6FUAfE5D-4OxPJjzoHP7TmHAVf10oE
