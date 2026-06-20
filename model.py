@@ -28,7 +28,8 @@ class CausalAttention(nn.Module):
         self.attention = nn.MultiheadAttention(hidden_dim, nb_heads, batch_first=True, dropout=p_dropout)
 
     def forward(self, x):
-        return self.attention(x,x,x, need_weights=False, is_causal=True, attn_mask=nn.modules.transformer.Transformer.generate_square_subsequent_mask(x.shape[-2]))[0]
+        mask = nn.modules.transformer.Transformer.generate_square_subsequent_mask(x.shape[-2]).to(x.device)
+        return self.attention(x,x,x, need_weights=False, is_causal=True, attn_mask=mask)[0]
 
 class Patch(nn.Module):
     def __init__(self, patch_size):
@@ -170,7 +171,7 @@ class WorldModel(nn.Module):
     ) -> torch.Tensor:
         _,_,_,H,W,C = info_dict['pixels'].shape
         device = next(self.parameters()).device
-        info_dict['pixels'] = torch.nan_to_num(info_dict['pixels'], 0.0).to(device).type(torch.float32)
+        info_dict['pixels'] = torch.nan_to_num(info_dict['pixels'], 0.0).to(device).type(torch.float32)/255
         info_dict['goal'] = torch.nan_to_num(info_dict['goal'] , 0.0).to(device).type(torch.float32)
         start = self.encode_frames(info_dict['pixels'].reshape(-1, H, W, C).transpose(1,-1).transpose(-1, -2).unsqueeze(1))
         E,N,T,AD = action_candidates.shape

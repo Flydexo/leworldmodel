@@ -21,5 +21,5 @@ model:
     pred_nb_heads: 16
 trackio:
     project: "tworoom"
-    name: "training-10"
+    name: "training-11"
     server_url: "http://127.0.0.1:7862?write_token=3qxFCeHCqCKLF6FUAfE5D-4OxPJjzoHP7TmHAVf10oE"

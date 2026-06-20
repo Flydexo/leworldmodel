@@ -61,7 +61,7 @@ def main(cfg: DictConfig):
         val_mseloss = torch.ones(1)
         for i, batch in enumerate(loader):
             optimizer.zero_grad()
-            frames = batch['pixels'].to(cfg.device).type(torch.float32)
+            frames = batch['pixels'].to(cfg.device).type(torch.float32)/255
             actions = torch.nan_to_num(batch['action'], 0.0).to(cfg.device).type(torch.float32)
             pred, embeds = model(frames, actions)
             t_sigregloss = SIGReg(embeds.reshape(-1, embeds.shape[-1]))
@@ -75,14 +75,11 @@ def main(cfg: DictConfig):
                 "train_mse_loss": t_mseloss.item(),
                 "train_sigreg_loss": t_sigregloss.item(),
                 "train_loss": t_loss.item(),
-                "val_mse_loss": val_mseloss.item(),
-                "val_sigreg_loss": val_sigregloss.item(),
-                "val_loss": val_loss.item(),
             })
         with torch.no_grad():    
             model.eval()
             for i, batch in enumerate(test_loader):
-                frames = batch['pixels'].to(cfg.device).type(torch.float32)
+                frames = batch['pixels'].to(cfg.device).type(torch.float32)/255
                 actions = torch.nan_to_num(batch['action'], 0.0).to(cfg.device).type(torch.float32)
                 pred, embeds = model(frames, actions)
                 v_sigregloss = SIGReg(embeds.reshape(-1, embeds.shape[-1]))
@@ -95,10 +92,7 @@ def main(cfg: DictConfig):
                     "val_batch": i,
                     "val_mse_loss": val_mseloss.item(),
                     "val_sigreg_loss": val_sigregloss.item(),
-                    "val_loss": val_loss.item(),
-                    "train_mse_loss": t_mseloss.item(),
-                    "train_sigreg_loss": t_sigregloss.item(),
-                    "train_loss": t_loss.item(),
+                    "val_loss": val_loss.item()
                 })
             model.train()
         scheduler.step()
