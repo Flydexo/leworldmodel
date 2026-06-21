@@ -3,8 +3,8 @@ epochs: 10
 batch_size: 135
 learning_rate: 0.0001
 lmbd: 0.1
-train_dataset: "tworooms.lance"
-test_dataset: "tworooms-test.lance"
+train_dataset: "tworooms-fov.lance"
+test_dataset: "tworooms-fov-test.lance"
 num_steps: 1
 model:
     target: ''
@@ -20,6 +20,6 @@ model:
     pred_p_dropout: 0.1
     pred_nb_heads: 16
 trackio:
-    project: "tworoom"
-    name: "training-11"
+    project: "tworoom-fov"
+    name: "training-0"
     server_url: "http://127.0.0.1:7862?write_token=3qxFCeHCqCKLF6FUAfE5D-4OxPJjzoHP7TmHAVf10oE"
