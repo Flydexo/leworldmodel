@@ -3,5 +3,4 @@
 .pyhon-version
 __pycache__
 videos
-*.pt
 .DS_Store
