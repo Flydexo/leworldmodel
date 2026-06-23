@@ -14,6 +14,7 @@ dependencies = [
     "pymunk>=6.6.0,<7.0.0",
     "shapely>=2.1.2",
     "stable-worldmodel[env,train]>=0.1.1",
+    "torch>=2.12.0",
     "torchvision>=0.27.0",
     "trackio>=0.27.0",
 ]
